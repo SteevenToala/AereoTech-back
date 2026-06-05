@@ -104,6 +104,23 @@ def login():
         }), 500
 
 
+@app.route("/api/auth/logout", methods=["POST"])
+def logout():
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Token no enviado o formato inválido"}), 400
+
+    token = auth_header.replace("Bearer ", "")
+    try:
+        auth_service.logout(token)
+        return jsonify({"mensaje": "Sesión cerrada correctamente"}), 200
+    except Exception as e:
+        return jsonify({
+            "error": "No se pudo cerrar la sesión",
+            "detalle": str(e)
+        }), 500
+
+
 @app.route("/api/vuelos", methods=["GET"])
 def vuelos():
     print("vuelos????????????????????????????????????????????????????????????????????")

@@ -89,3 +89,25 @@ class AuthService:
         finally:
             cursor.close()
             conexion.close()
+
+    def logout(self, token):
+        conexion = Database.obtener_conexion()
+        cursor = conexion.cursor()
+
+        try:
+            cursor.execute("""
+                UPDATE tokens
+                SET activo = FALSE
+                WHERE token = %s
+            """, (token,))
+
+            conexion.commit()
+            return True
+
+        except Exception as e:
+            conexion.rollback()
+            raise e
+
+        finally:
+            cursor.close()
+            conexion.close()
