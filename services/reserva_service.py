@@ -45,6 +45,7 @@ class ReservaService:
             cursor.execute("""
                 SELECT 
                     r.id,
+                    r.vuelo_id,
                     r.codigo_reserva,
                     r.cantidad_asientos,
                     r.total,
@@ -67,6 +68,7 @@ class ReservaService:
                 WHERE r.usuario_id = %s
                 GROUP BY 
                     r.id,
+                    r.vuelo_id,
                     r.codigo_reserva,
                     r.cantidad_asientos,
                     r.total,
@@ -86,6 +88,7 @@ class ReservaService:
             for fila in cursor.fetchall():
                 reservas.append({
                     "id": fila["id"],
+                    "vuelo_id": fila["vuelo_id"],
                     "codigo_reserva": fila["codigo_reserva"],
                     "cantidad_asientos": fila["cantidad_asientos"],
                     "total": float(fila["total"]),

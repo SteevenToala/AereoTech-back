@@ -132,10 +132,17 @@ def vuelos():
 
     origen = request.args.get("origen")
     destino = request.args.get("destino")
+    fecha_inicio = request.args.get("fecha_inicio")
+    fecha_fin = request.args.get("fecha_fin")
+
+    # Compatibility: if single 'fecha' is sent, use it as both start and end
     fecha = request.args.get("fecha")
+    if fecha and not fecha_inicio and not fecha_fin:
+        fecha_inicio = fecha
+        fecha_fin = fecha
 
     try:
-        vuelos_disponibles = vuelo_service.buscar_vuelos(origen, destino, fecha)
+        vuelos_disponibles = vuelo_service.buscar_vuelos(origen, destino, fecha_inicio, fecha_fin)
         return jsonify(vuelos_disponibles), 200
 
     except Exception as e:
@@ -224,6 +231,35 @@ def cancelar(reserva_id):
             "detalle": str(e)
         }), 400
 
+@app.route("/api/reservas/<int:reserva_id>/asientos", methods=["PUT"])
+def actualizar_reserva_asientos(reserva_id):
+    usuario, error, codigo = obtener_usuario_desde_token()
+
+    if error:
+        return error, codigo
+
+    datos = request.get_json(silent=True)
+    if not datos:
+        return jsonify({"error": "No se recibió JSON válido"}), 400
+
+    asientos = datos.get("asientos")
+    if not isinstance(asientos, list) or len(asientos) == 0:
+        return jsonify({"error": "Debe seleccionar al menos un asiento"}), 400
+
+    try:
+        asiento_service.actualizar_reserva_con_asientos(
+            usuario["id"],
+            reserva_id,
+            asientos
+        )
+        return jsonify({"mensaje": "Reserva actualizada correctamente", "asientos": asientos}), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "No se pudo actualizar la reserva",
+            "detalle": str(e)
+        }), 400
+
 @app.route("/api/vuelos/<int:vuelo_id>/asientos", methods=["GET"])
 def listar_asientos_vuelo(vuelo_id):
     usuario, error, codigo = obtener_usuario_desde_token()
@@ -294,6 +330,9 @@ def crear_vuelo():
     if error:
         return error, codigo
 
+    if usuario.get("rol") != "admin":
+        return jsonify({"error": "No tiene permisos de administrador"}), 403
+
     datos = request.get_json(silent=True)
 
     if not datos:
@@ -329,6 +368,73 @@ def crear_vuelo():
     except Exception as e:
         return jsonify({
             "error": "No se pudo crear el vuelo",
+            "detalle": str(e)
+        }), 400
+
+@app.route("/api/admin/vuelos/<int:vuelo_id>", methods=["PUT"])
+def editar_vuelo(vuelo_id):
+    usuario, error, codigo = obtener_usuario_desde_token()
+
+    if error:
+        return error, codigo
+
+    if usuario.get("rol") != "admin":
+        return jsonify({"error": "No tiene permisos de administrador"}), 403
+
+    datos = request.get_json(silent=True)
+
+    if not datos:
+        return jsonify({
+            "error": "No se recibió JSON válido"
+        }), 400
+
+    campos = [
+        "aerolinea",
+        "origen",
+        "destino",
+        "fecha",
+        "hora_salida",
+        "hora_llegada",
+        "precio"
+    ]
+
+    for campo in campos:
+        if datos.get(campo) is None or datos.get(campo) == "":
+            return jsonify({
+                "error": f"El campo {campo} es obligatorio"
+            }), 400
+
+    try:
+        vuelo = admin_vuelo_service.editar_vuelo(vuelo_id, datos)
+
+        return jsonify({
+            "mensaje": "Vuelo actualizado correctamente",
+            "vuelo": vuelo
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "No se pudo actualizar el vuelo",
+            "detalle": str(e)
+        }), 400
+
+@app.route("/api/admin/vuelos/<int:vuelo_id>", methods=["DELETE"])
+def eliminar_vuelo(vuelo_id):
+    usuario, error, codigo = obtener_usuario_desde_token()
+
+    if error:
+        return error, codigo
+
+    if usuario.get("rol") != "admin":
+        return jsonify({"error": "No tiene permisos de administrador"}), 403
+
+    try:
+        admin_vuelo_service.eliminar_vuelo(vuelo_id)
+        return jsonify({"mensaje": "Vuelo eliminado correctamente"}), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "No se pudo eliminar el vuelo",
             "detalle": str(e)
         }), 400
 

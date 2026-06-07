@@ -10,6 +10,33 @@ class AsientoService:
         cursor = conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         try:
+            # Check if seats are already generated
+            cursor.execute("SELECT COUNT(*) as total FROM asientos_vuelo WHERE vuelo_id = %s", (vuelo_id,))
+            resultado = cursor.fetchone()
+
+            if resultado["total"] == 0:
+                # Fetch flight capacity to auto-generate seats
+                cursor.execute("SELECT asientos_disponibles FROM vuelos WHERE id = %s", (vuelo_id,))
+                vuelo = cursor.fetchone()
+                if vuelo:
+                    cantidad = vuelo["asientos_disponibles"]
+                    letras = ["A", "B", "C", "D"]
+                    asientos = []
+                    fila = 1
+                    while len(asientos) < cantidad:
+                        for letra in letras:
+                            if len(asientos) < cantidad:
+                                asientos.append(f"{fila}{letra}")
+                        fila += 1
+
+                    for numero_asiento in asientos:
+                        cursor.execute("""
+                            INSERT INTO asientos_vuelo (vuelo_id, numero_asiento, estado)
+                            VALUES (%s, %s, 'DISPONIBLE')
+                            ON CONFLICT DO NOTHING
+                        """, (vuelo_id, numero_asiento))
+                    conexion.commit()
+
             cursor.execute("""
                 SELECT 
                     id,
@@ -70,6 +97,26 @@ class AsientoService:
             conexion.rollback()
             raise e
 
+        finally:
+            cursor.close()
+            conexion.close()
+
+    def actualizar_reserva_con_asientos(self, usuario_id, reserva_id, asientos):
+        conexion = Database.obtener_conexion()
+        cursor = conexion.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT actualizar_reserva_asientos_segura(%s, %s, %s)
+            """, (
+                usuario_id,
+                reserva_id,
+                asientos
+            ))
+            conexion.commit()
+        except Exception as e:
+            conexion.rollback()
+            raise e
         finally:
             cursor.close()
             conexion.close()

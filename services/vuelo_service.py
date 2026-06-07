@@ -5,7 +5,7 @@ from models.vuelo_model import VueloModel
 
 class VueloService:
 
-    def buscar_vuelos(self, origen=None, destino=None, fecha=None):
+    def buscar_vuelos(self, origen=None, destino=None, fecha_inicio=None, fecha_fin=None):
         conexion = Database.obtener_conexion()
         cursor = conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -19,12 +19,14 @@ class VueloService:
                   AND asientos_disponibles > 0
                   AND (%s IS NULL OR origen ILIKE %s)
                   AND (%s IS NULL OR destino ILIKE %s)
-                  AND (%s IS NULL OR fecha = %s)
+                  AND (%s IS NULL OR fecha >= %s)
+                  AND (%s IS NULL OR fecha <= %s)
                 ORDER BY fecha, hora_salida
             """, (
                 origen, f"%{origen}%" if origen else None,
                 destino, f"%{destino}%" if destino else None,
-                fecha, fecha
+                fecha_inicio, fecha_inicio,
+                fecha_fin, fecha_fin
             ))
 
             vuelos = []

@@ -13,7 +13,7 @@ class AuthService:
             password_hash = Seguridad.generar_hash(password)
 
             cursor.execute("""
-                SELECT id, usuario, nombre_completo, correo
+                SELECT id, usuario, nombre_completo, correo, rol
                 FROM usuarios
                 WHERE usuario = %s
                   AND password_hash = %s
@@ -45,7 +45,8 @@ class AuthService:
                     "id": fila["id"],
                     "usuario": fila["usuario"],
                     "nombre_completo": fila["nombre_completo"],
-                    "correo": fila["correo"]
+                    "correo": fila["correo"],
+                    "rol": fila["rol"]
                 },
                 "token": token,
                 "expiracion": expiracion.isoformat()
@@ -65,7 +66,7 @@ class AuthService:
 
         try:
             cursor.execute("""
-                SELECT u.id, u.usuario, u.nombre_completo, u.correo
+                SELECT u.id, u.usuario, u.nombre_completo, u.correo, u.rol
                 FROM tokens t
                 INNER JOIN usuarios u ON u.id = t.usuario_id
                 WHERE t.token = %s
@@ -83,7 +84,8 @@ class AuthService:
                 "id": fila["id"],
                 "usuario": fila["usuario"],
                 "nombre_completo": fila["nombre_completo"],
-                "correo": fila["correo"]
+                "correo": fila["correo"],
+                "rol": fila["rol"]
             }
 
         finally:
